@@ -1,15 +1,52 @@
-/** biome-ignore-all lint/a11y/noSvgWithoutTitle: <explanation> */
+/** biome-ignore-all lint/a11y/noSvgWithoutTitle: SVGs without titles are used for decoration */
 
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { VideoCard } from "@/components/VideoCard";
-import { fetchVideos, VideoContent } from "@/constants/videoContent";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { CATEGORY_VIDEOS } from "@/constants/data";
+import {
+  getNextVideos,
+  getShuffledPlaylist,
+  type VideoContent,
+} from "@/constants/videoContent";
 
 const App: React.FC = () => {
-  const [videos, setVideos] = useState<VideoContent[]>(() => fetchVideos(3, 1));
+  // State for session start and categories
+  const [hasStarted, setHasStarted] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [playlist, setPlaylist] = useState<string[]>([]);
+
+  // State for video feed
+  const [videos, setVideos] = useState<VideoContent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // Ref to track loading state synchronously
+  const isLoadingRef = useRef(false);
+
   const feedRef = useRef<HTMLDivElement>(null);
+
+  // --- CATEGORY SELECTION LOGIC ---
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category],
+    );
+  };
+
+  const handleContinue = () => {
+    if (selectedCategories.length === 0) return;
+
+    const newPlaylist = getShuffledPlaylist(selectedCategories);
+    setPlaylist(newPlaylist);
+
+    // Initialize first batch of videos
+    const initialVideos = getNextVideos(newPlaylist, 3, 0);
+    setVideos(initialVideos);
+
+    setHasStarted(true);
+  };
 
   // --- A. INFINITE SCROLL / LOAD MORE LOGIC ---
 
@@ -20,20 +57,27 @@ const App: React.FC = () => {
 
       // If the user is viewing the second-to-last or last video, load more.
       if (
-        !isLoading &&
+        !isLoadingRef.current &&
         lastVideoId &&
         (videoId === lastVideoId || videoId === lastVideoId - 1)
       ) {
         setIsLoading(true);
+        isLoadingRef.current = true;
+
         // Simulate API delay
         setTimeout(() => {
-          const newVideos = fetchVideos(3, lastVideoId + 1);
-          setVideos((prev) => [...prev, ...newVideos]);
+          setVideos((prev) => {
+            // Calculate startId based on current length of the updated state
+            const currentCount = prev.length;
+            const newVideos = getNextVideos(playlist, 3, currentCount);
+            return [...prev, ...newVideos];
+          });
           setIsLoading(false);
+          isLoadingRef.current = false;
         }, 500);
       }
     },
-    [videos, isLoading],
+    [videos, playlist], // Removed isLoading from dependency since we use ref
   );
 
   // --- B. SCROLL BUTTON LOGIC ---
@@ -80,6 +124,8 @@ const App: React.FC = () => {
   const REDIRECT_URL = "https://www.google.com";
 
   useEffect(() => {
+    if (!hasStarted) return;
+
     const timer = setTimeout(() => {
       console.log(
         `Redirecting user to ${REDIRECT_URL} after ${REDIRECT_TIME_MS / 60000} minutes.`,
@@ -89,7 +135,46 @@ const App: React.FC = () => {
     }, REDIRECT_TIME_MS);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [hasStarted]);
+
+  if (!hasStarted) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 font-sans p-4">
+        <h1 className="text-3xl font-bold mb-8">Select Categories</h1>
+        <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
+          <ul className="space-y-4">
+            {Object.keys(CATEGORY_VIDEOS).map((category) => (
+              <li key={category} className="flex items-center">
+                <label className="flex items-center space-x-3 cursor-pointer w-full p-2 hover:bg-gray-50 rounded">
+                  <input
+                    type="checkbox" // Using checkbox as multiple selection is allowed
+                    className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 transition duration-150 ease-in-out"
+                    checked={selectedCategories.includes(category)}
+                    onChange={() => toggleCategory(category)}
+                  />
+                  <span className="text-gray-900 font-medium">{category}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8">
+            <button
+              type="button"
+              onClick={handleContinue}
+              disabled={selectedCategories.length === 0}
+              className={`w-full py-3 px-4 rounded-full font-bold text-white transition-colors duration-200 ${
+                selectedCategories.length === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 shadow-lg"
+              }`}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row items-center justify-center min-h-screen bg-gray-100 font-sans">
@@ -115,7 +200,7 @@ const App: React.FC = () => {
       {/* Scrollable Feed Container */}
       <div
         ref={feedRef}
-        className="reels-feed w-full md:max-w-md h-screen md:h-[90vh] overflow-y-scroll snap-ybg-black"
+        className="reels-feed w-full md:max-w-md h-screen md:h-[90vh] overflow-y-scroll snap-y bg-black"
       >
         {videos.map((video) => (
           <VideoCard
