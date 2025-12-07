@@ -15,7 +15,8 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onVisible }) => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.9) {
+          // Check for near 100% visibility (0.99 handles minor sub-pixel rendering differences)
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
             onVisible(video.id);
 
             if (videoRef.current) {
@@ -31,7 +32,8 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onVisible }) => {
         });
       },
       {
-        threshold: 0.9,
+        // 1.0 means the callback triggers only when 100% of the target is visible
+        threshold: 0.5,
         root: elementRef.current?.parentElement,
       },
     );
@@ -57,18 +59,20 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onVisible }) => {
         ref={videoRef}
         src={video.videoUrl}
         className="w-full h-full object-cover"
-        autoPlay
+        // Removed 'autoPlay' to prevent pre-loading start
+        // autoPlay
         loop
-        muted
+        muted={false}
         playsInline
-        onLoadedData={(e) => {
-          e.currentTarget.play().catch(() => {});
-        }}
+        // Removed 'onLoadedData' that forced play immediately
+        // onLoadedData={(e) => {
+        //   e.currentTarget.play().catch(() => {});
+        // }}
       >
         Your browser does not support the video tag.
       </video>
 
-      <div className="absolute bottom-0 left-0 w-full p-6 text-white bg-gradient-to-t from-black/70 to-transparent">
+      <div className="absolute bottom-0 left-0 w-full p-6 text-white bg-linear-to-t from-black/70 to-transparent">
         <p className="font-bold text-lg">{video.caption}</p>
       </div>
     </div>
