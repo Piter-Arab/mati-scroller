@@ -120,18 +120,15 @@ const App: React.FC = () => {
     }
   };
 
-  const REDIRECT_TIME_MS = 300000; // 5 minutes
-  const REDIRECT_URL = "https://www.google.com";
+  const REDIRECT_TIME_MS = 2000; // 2 minutes
 
   useEffect(() => {
     if (!hasStarted) return;
 
     const timer = setTimeout(() => {
-      console.log(
-        `Redirecting user to ${REDIRECT_URL} after ${REDIRECT_TIME_MS / 60000} minutes.`,
-      );
       // window.location.href = REDIRECT_URL; // Uncomment this in a real application
-      alert(`Simulation: Redirecting to ${REDIRECT_URL} now!`);
+      // alert(`Simulation: Redirecting to ${REDIRECT_URL} now!`);
+      window.close()
     }, REDIRECT_TIME_MS);
 
     return () => clearTimeout(timer);
