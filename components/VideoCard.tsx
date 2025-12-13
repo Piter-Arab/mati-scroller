@@ -59,15 +59,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onVisible }) => {
         ref={videoRef}
         src={video.videoUrl}
         className="w-full h-full object-cover"
-        // Removed 'autoPlay' to prevent pre-loading start
-        // autoPlay
         loop
         muted={false}
         playsInline
-        // Removed 'onLoadedData' that forced play immediately
-        // onLoadedData={(e) => {
-        //   e.currentTarget.play().catch(() => {});
-        // }}
       >
         Your browser does not support the video tag.
       </video>

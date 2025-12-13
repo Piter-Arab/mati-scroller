@@ -64,17 +64,14 @@ const App: React.FC = () => {
         setIsLoading(true);
         isLoadingRef.current = true;
 
-        // Simulate API delay
-        setTimeout(() => {
-          setVideos((prev) => {
-            // Calculate startId based on current length of the updated state
-            const currentCount = prev.length;
-            const newVideos = getNextVideos(playlist, 3, currentCount);
-            return [...prev, ...newVideos];
-          });
-          setIsLoading(false);
-          isLoadingRef.current = false;
-        }, 500);
+        setVideos((prev) => {
+          // Calculate startId based on current length of the updated state
+          const currentCount = prev.length;
+          const newVideos = getNextVideos(playlist, 3, currentCount);
+          return [...prev, ...newVideos];
+        });
+        setIsLoading(false);
+        isLoadingRef.current = false;
       }
     },
     [videos, playlist], // Removed isLoading from dependency since we use ref
@@ -120,7 +117,7 @@ const App: React.FC = () => {
     }
   };
 
-  const REDIRECT_TIME_MS = 2000; // 2 minutes
+  const REDIRECT_TIME_MS = 120000; // 2 minutes
 
   useEffect(() => {
     if (!hasStarted) return;
@@ -128,7 +125,7 @@ const App: React.FC = () => {
     const timer = setTimeout(() => {
       // window.location.href = REDIRECT_URL; // Uncomment this in a real application
       // alert(`Simulation: Redirecting to ${REDIRECT_URL} now!`);
-      window.close()
+      window.close();
     }, REDIRECT_TIME_MS);
 
     return () => clearTimeout(timer);
@@ -137,7 +134,9 @@ const App: React.FC = () => {
   if (!hasStarted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 font-sans p-4">
-        <h1 className="text-3xl font-bold mb-8">Select Categories</h1>
+        <h1 className="text-3xl font-bold mb-8 text-neutral-800">
+          Select Categories
+        </h1>
         <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
           <ul className="space-y-4">
             {Object.keys(CATEGORY_VIDEOS).map((category) => (
