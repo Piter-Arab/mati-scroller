@@ -20,8 +20,16 @@ const App: React.FC = () => {
   // State for video feed
   const [videos, setVideos] = useState<VideoContent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Global Mute State (default to true for autoplay)
+  const [isMuted, setIsMuted] = useState(true);
+
   // Ref to track loading state synchronously
   const isLoadingRef = useRef(false);
+  // Ref to track videos state without triggering callback updates
+  const videosRef = useRef<VideoContent[]>([]);
+  // Update ref on every render so it's always fresh in callbacks
+  videosRef.current = videos;
 
   const feedRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +50,8 @@ const App: React.FC = () => {
     setPlaylist(newPlaylist);
 
     // Initialize first batch of videos
-    const initialVideos = getNextVideos(newPlaylist, 3, 0);
+    // Batch size 5 for smoother scrolling
+    const initialVideos = getNextVideos(newPlaylist, 5, 0);
     setVideos(initialVideos);
 
     setHasStarted(true);
@@ -50,31 +59,36 @@ const App: React.FC = () => {
 
   // --- A. INFINITE SCROLL / LOAD MORE LOGIC ---
 
+  // Use useEffect to reset the loading ref when videos update.
+  useEffect(() => {
+    if (isLoadingRef.current) {
+      isLoadingRef.current = false;
+      setIsLoading(false);
+    }
+  }, [videos]);
+
   const handleVideoVisible = useCallback(
     (videoId: number) => {
+      // Access the latest videos state via ref to avoid dependency change
+      const currentVideos = videosRef.current;
       // Determine the index of the last currently loaded video
-      const lastVideoId = videos[videos.length - 1]?.id;
+      const lastVideoId = currentVideos[currentVideos.length - 1]?.id;
 
-      // If the user is viewing the second-to-last or last video, load more.
-      if (
-        !isLoadingRef.current &&
-        lastVideoId &&
-        (videoId === lastVideoId || videoId === lastVideoId - 1)
-      ) {
+      // Trigger load earlier: if user sees the 3rd to last video (or later)
+      if (!isLoadingRef.current && lastVideoId && videoId >= lastVideoId - 3) {
         setIsLoading(true);
         isLoadingRef.current = true;
 
         setVideos((prev) => {
           // Calculate startId based on current length of the updated state
           const currentCount = prev.length;
-          const newVideos = getNextVideos(playlist, 3, currentCount);
+          // Load 5 more videos
+          const newVideos = getNextVideos(playlist, 5, currentCount);
           return [...prev, ...newVideos];
         });
-        setIsLoading(false);
-        isLoadingRef.current = false;
       }
     },
-    [videos, playlist], // Removed isLoading from dependency since we use ref
+    [playlist], // playlist is stable for the session
   );
 
   // --- B. SCROLL BUTTON LOGIC ---
@@ -123,8 +137,6 @@ const App: React.FC = () => {
     if (!hasStarted) return;
 
     const timer = setTimeout(() => {
-      // window.location.href = REDIRECT_URL; // Uncomment this in a real application
-      // alert(`Simulation: Redirecting to ${REDIRECT_URL} now!`);
       window.close();
     }, REDIRECT_TIME_MS);
 
@@ -203,6 +215,8 @@ const App: React.FC = () => {
             key={video.id}
             video={video}
             onVisible={handleVideoVisible}
+            isMuted={isMuted}
+            toggleMute={() => setIsMuted(!isMuted)}
           />
         ))}
 
